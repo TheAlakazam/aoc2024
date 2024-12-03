@@ -1,3 +1,4 @@
+use aoc2024::AocClient;
 use chrono::{Datelike, FixedOffset};
 use clap::{Parser, Subcommand};
 mod days;
@@ -8,43 +9,50 @@ use days::{
     day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25,
 };
 use etc::solution::Solution;
-use reqwest::{
-    header, Url,
-};
 use std::{fs, time::Instant};
 
 pub type SolutionPair = (Solution, Solution);
 
-const YEAR: u16 = 2024;
+const YEAR: u32 = 2024;
+const BASE_URL: &str = "https://adventofcode.com";
 
 #[derive(Parser)]
 #[command(name = "Advent of Code 2024")]
 #[command(about = "Solutions for Advent of Code 2024", version = "1.0")]
 struct Cli {
-    #[arg(short, long, action = clap::ArgAction::Append)]
-    days: Option<Vec<u8>>,
-
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    Run,
-    GetInput,
+    Run {
+        #[arg(short, long, action = clap::ArgAction::Append)]
+        days: Option<Vec<u8>>,
+    },
+    GetInput {
+        #[arg(short, long, action = clap::ArgAction::Append)]
+        days: Option<Vec<u8>>,
+    },
+    Submit {
+        #[arg(short, long, action = clap::ArgAction::Append)]
+        days: Option<Vec<u8>>,
+        #[arg(short, long, action = clap::ArgAction::Set)]
+        level: Option<u8>,
+    },
 }
 
 fn main() {
     let cli = Cli::parse();
     let offset = FixedOffset::west_opt(5 * 60 * 60).unwrap();
     let today_date = chrono::Utc::now().with_timezone(&offset).day() as u8;
-    let days: Vec<u8> = cli.days.unwrap_or_else(|| vec![today_date]);
 
     let mut runtime = 0.0;
 
-    for day in days {
-        match cli.command {
-            Commands::Run => {
+    match cli.command {
+        Commands::Run { days } => {
+            let days: Vec<u8> = days.unwrap_or_else(|| vec![today_date]);
+            for day in days {
                 let solver = get_day_solver(day);
                 let start = Instant::now();
                 let (part1, part2) = solver();
@@ -55,9 +63,41 @@ fn main() {
                 println!("Part 1: {}", part1);
                 println!("Part 2: {}", part2);
             }
-
-            Commands::GetInput => {
+        }
+        Commands::GetInput { days } => {
+            let days: Vec<u8> = days.unwrap_or_else(|| vec![today_date]);
+            for day in days {
                 download_input(day as usize);
+            }
+        }
+        Commands::Submit { days, level } => {
+            let days: Vec<u8> = days.unwrap_or_else(|| vec![today_date]);
+            for day in days {
+                let start = Instant::now();
+
+                let solver = get_day_solver(day);
+                let (part1, part2) = solver();
+                match level {
+                    Some(1) => {
+                        println!("Day {}: {}", day, part1);
+                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+                    }
+                    Some(2) => {
+                        println!("Day {}: {}", day, part2);
+                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+                    }
+                    None => {
+                        println!("Day {}:", day);
+                        println!("Part 1: {}", part1);
+                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+
+                        println!("Part 2: {}", part2);
+                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+                    }
+                    _ => panic!("Invalid level"),
+                }
+                let end = Instant::now();
+                runtime += end.duration_since(start).as_secs_f64() * 1000.0;
             }
         }
     }
@@ -97,42 +137,24 @@ fn get_day_solver(day: u8) -> fn() -> SolutionPair {
 }
 
 fn download_input(day: usize) {
-    // Read session cookie from .session file
-    let session = fs::read_to_string(".session").expect("Could not find .session file");
-    let url = format!("https://adventofcode.com/{}/day/{}/input", YEAR, day)
-        .parse::<Url>()
-        .unwrap();
-
-    let mut request_headers = header::HeaderMap::new();
-    request_headers.insert(
-        header::COOKIE,
-        header::HeaderValue::from_str(&format!("session={}", session.trim()))
-            .expect("Invalid session header value"),
-    );
-
-    let client = reqwest::blocking::ClientBuilder::new()
-        .default_headers(request_headers)
-        .cookie_store(true)
-        .build()
-        .unwrap();
-    let response = client.get(url).send().unwrap();
-
-    if response.status().is_success() {
-        let mut text = response.text().unwrap();
-        // Remove trailing newline
-        text.pop();
-        let path = format!("./input/day{:02}.txt", day);
-        fs::write(&path, text).unwrap();
-        println!("Successfully downloaded input to {}", &path);
-    } else {
-        println!(
-            "Failed to download input for day {}. Status: {}",
-            day,
-            response.status()
-        );
-        panic!(
-            "Could not get input for day {}. Is your correct session cookie in your .session file?",
-            day
+    let client = AocClient::new(BASE_URL, &get_session());
+    client
+        .download_input(
+            YEAR,
+            day as u32,
+            format!("input/day{:02}.txt", day).as_str().as_ref(),
         )
-    }
+        .expect("Failed to download input");
+}
+
+fn upload_solution(day: usize, level: u8, answer: &str) {
+    let client = AocClient::new(BASE_URL, &get_session());
+    let res = client
+        .upload_solution(YEAR, day as u32, level as u32, answer)
+        .expect("Failed to upload solution");
+    println!("{}", res);
+}
+
+fn get_session() -> String {
+    fs::read_to_string(".session").expect("Failed to read session.txt")
 }

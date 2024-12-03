@@ -14,7 +14,7 @@ impl AocClient {
         AocClient {
             client: Client::new(),
             base_url: base_url.to_string(),
-            session_token: session_token.to_string(),
+            session_token: session_token.to_string().trim().to_string(),
         }
     }
 
