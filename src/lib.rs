@@ -45,13 +45,13 @@ impl AocClient {
         answer: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let url = format!("{}/{}/day/{}/answer", self.base_url, year, day);
-        let response = self
+        let request = self
             .client
             .post(&url)
             .header("Cookie", format!("session={}", self.session_token))
-            .form(&[("level", level.to_string()), ("answer", answer.to_string())])
-            .send()?
-            .text()?;
+            .form(&[("level", level.to_string()), ("answer", answer.to_string())]);
+
+        let response = request.send()?.text()?;
 
         Ok(response)
     }

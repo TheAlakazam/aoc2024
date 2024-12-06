@@ -152,7 +152,11 @@ fn upload_solution(day: usize, level: u8, answer: &str) {
     let res = client
         .upload_solution(YEAR, day as u32, level as u32, answer)
         .expect("Failed to upload solution");
-    println!("{}", res);
+    if res.contains("That's the right answer") {
+        println!("✅ That's the right answer!");
+    } else {
+        println!("❌ That's not the right answer.")
+    }
 }
 
 fn get_session() -> String {
