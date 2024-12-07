@@ -52,7 +52,7 @@ impl AocClient {
             .form(&[("level", level.to_string()), ("answer", answer.to_string())]);
 
         let response = request.send()?.text()?;
-
+        println!("{}", response);
         Ok(response)
     }
 }

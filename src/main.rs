@@ -84,7 +84,7 @@ fn main() {
                     }
                     Some(2) => {
                         println!("Day {}: {}", day, part2);
-                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+                        upload_solution(day as usize, level.unwrap(), &part2.to_string());
                     }
                     None => {
                         println!("Day {}:", day);
@@ -92,7 +92,7 @@ fn main() {
                         upload_solution(day as usize, level.unwrap(), &part1.to_string());
 
                         println!("Part 2: {}", part2);
-                        upload_solution(day as usize, level.unwrap(), &part1.to_string());
+                        upload_solution(day as usize, level.unwrap(), &part2.to_string());
                     }
                     _ => panic!("Invalid level"),
                 }
