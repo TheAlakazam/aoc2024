@@ -1,3 +1,5 @@
+#![feature(is_sorted)]
+
 use aoc2024::AocClient;
 use chrono::{Datelike, FixedOffset};
 use clap::{Parser, Subcommand};
